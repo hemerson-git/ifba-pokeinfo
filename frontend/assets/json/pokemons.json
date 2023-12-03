@@ -19,7 +19,6 @@
           "slot": 3
         }
       ],
-      "likes": 0,
       "base_experience": 64,
       "forms": [{
         "name": "bulbasaur",
@@ -281,7 +280,6 @@
           "slot": 3
         }
       ],
-      "likes": 0,
       "base_experience": 142,
       "forms": [{
         "name": "ivysaur",
@@ -544,7 +542,6 @@
           "slot": 3
         }
       ],
-      "likes": 0,
       "base_experience": 236,
       "forms": [{
         "name": "venusaur",
@@ -807,7 +804,6 @@
           "slot": 3
         }
       ],
-      "likes": 0,
       "base_experience": 62,
       "forms": [{
         "name": "charmander",
@@ -1061,7 +1057,6 @@
           "slot": 3
         }
       ],
-      "likes": 0,
       "base_experience": 142,
       "forms": [{
         "name": "charmeleon",
@@ -1315,7 +1310,6 @@
           "slot": 3
         }
       ],
-      "likes": 0,
       "base_experience": 240,
       "forms": [{
         "name": "charizard",
@@ -1577,7 +1571,6 @@
           "slot": 3
         }
       ],
-      "likes": 0,
       "base_experience": 63,
       "forms": [{
         "name": "squirtle",
@@ -1831,7 +1824,6 @@
           "slot": 3
         }
       ],
-      "likes": 0,
       "base_experience": 142,
       "forms": [{
         "name": "wartortle",
@@ -2085,7 +2077,6 @@
           "slot": 3
         }
       ],
-      "likes": 0,
       "base_experience": 239,
       "forms": [{
         "name": "blastoise",
@@ -2338,7 +2329,6 @@
           "slot": 3
         }
       ],
-      "likes": 0,
       "base_experience": 39,
       "forms": [{
         "name": "caterpie",
@@ -2582,7 +2572,6 @@
         "is_hidden": false,
         "slot": 1
       }],
-      "likes": 0,
       "base_experience": 72,
       "forms": [{
         "name": "metapod",

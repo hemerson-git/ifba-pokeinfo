@@ -73,10 +73,10 @@ class PokemonsState extends State<Pokemons> {
       });
     } else {
       morePokemons = _pokemons;
-      final totalDeFeedsParaCarregar = _nextPage * pageSize;
-      if (_staticFeed['pokemons'].length >= totalDeFeedsParaCarregar) {
+      final totalFeedsToLoad = _nextPage * pageSize;
+      if (_staticFeed['pokemons'].length >= totalFeedsToLoad) {
         morePokemons =
-            _staticFeed['pokemons'].sublist(0, totalDeFeedsParaCarregar);
+            _staticFeed['pokemons'].sublist(0, totalFeedsToLoad);
       } else {
         morePokemons = _staticFeed['pokemons'];
       }
