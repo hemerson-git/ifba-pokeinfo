@@ -26,9 +26,9 @@ def get_comments(feed_id, page, page_size):
 
     connection = get_database_connection()
     cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT id as comment_id, feed as produto_id, comment, nome, account, DATE_FORMAT(data, '%Y-%m-%d %H:%i') as data " +
+    cursor.execute("SELECT id as comment_id, feed as pokemon_id, comment, name, account, DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') as date " +
                    "FROM comments " +
-                   "WHERE feed = " + str(feed_id) + " ORDER BY data DESC " +
+                   "WHERE feed = " + str(feed_id) + " ORDER BY created_at DESC " +
                    "LIMIT " + str((page - 1) * page_size) + ", " + str(page_size))
     comments = cursor.fetchall()
     connection.close()
@@ -36,19 +36,19 @@ def get_comments(feed_id, page, page_size):
     return jsonify(comments)
 
 
-@service.post("/add/<int:feed_id>/<string:nome>/<string:account>/<string:comment>")
-def add_comment(feed_id, nome, account, comment):
+@service.post("/add/<int:feed_id>/<string:name>/<string:account>/<string:comment>")
+def add_comment(feed_id, name, account, comment):
     result = jsonify(status = "ok", error = "")
 
     connection = get_database_connection()
     cursor = connection.cursor()
     try:
         cursor.execute(
-            f"INSERT INTO comments(feed, nome, account, comment, data) VALUES({feed_id}, '{nome}', '{account}', '{comment}', NOW())")
+            f"INSERT INTO comments(feed, name, account, comment, created_at) VALUES({feed_id}, '{name}', '{account}', '{comment}', NOW())")
         connection.commit()
     except:
         connection.rollback()
-        result = jsonify(status = "error", error = "errorr while trying to add comment.")
+        result = jsonify(status = "error", error = "error while trying to add comment.")
 
     connection.close()
 
