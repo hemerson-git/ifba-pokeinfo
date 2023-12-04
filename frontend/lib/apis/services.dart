@@ -41,3 +41,27 @@ class ServicePokemons {
     return pokemon;
   }
 }
+
+class ServiceLikes {
+  Future<bool> hasLiked(User user, int idPokemon) async {
+    final response = await http
+        .get(Uri.parse("${URL_LIKED.toString()}/${user.email}/$idPokemon"));
+    final result = jsonDecode(response.body);
+
+    return result["liked"] as bool;
+  }
+
+  Future<dynamic> like(User user, int idPokemon) async {
+    final response = await http.post(
+        Uri.parse("${URL_LIKE.toString()}/${user.email}/$idPokemon"));
+
+    return jsonDecode(response.body);
+  }
+
+  Future<dynamic> unlike(User user, int idPokemon) async {
+    final response = await http.post(
+        Uri.parse("${URL_UNLIKE.toString()}/${user.email}/$idPokemon"));
+
+    return jsonDecode(response.body);
+  }
+}

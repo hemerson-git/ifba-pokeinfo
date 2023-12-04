@@ -9,6 +9,7 @@ import 'package:pokeinfo/apis/services.dart';
 import 'package:keyboard_visibility_pro/keyboard_visibility_pro.dart';
 import 'package:page_view_dot_indicator/page_view_dot_indicator.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 import '../state.dart';
 
@@ -42,6 +43,7 @@ class DetailsState extends State<Details> {
   bool _isKeyboardVisible = false;
 
   late ServicePokemons _servicePokemons;
+  late ServiceLikes _serviceLikes;
 
   @override
   void initState() {
@@ -50,6 +52,7 @@ class DetailsState extends State<Details> {
 
     _newCommentsController = TextEditingController();
     _servicePokemons = ServicePokemons();
+    _serviceLikes = ServiceLikes();
 
     _loadPokemon();
 
@@ -77,10 +80,16 @@ class DetailsState extends State<Details> {
     _servicePokemons.findPokemon(appState.idPokemon).then((pokemon) {
       _pokemon = pokemon;
 
-      setState(() {
-        _hasPokemon = _pokemon != null;
-        _isLoadingComments = false;
-      });
+      _serviceLikes
+        .hasLiked(appState.user!, appState.idPokemon)
+        .then((hasLiked) {
+          setState(() {
+            _hasPokemon = _pokemon != null;
+            _liked = hasLiked;
+            
+            _isLoadingComments = false;
+          });
+        });
     });
   }
 
@@ -307,16 +316,32 @@ class DetailsState extends State<Details> {
                       ? IconButton(
                           onPressed: () {
                             if (_liked) {
-                              setState(() {
-                                _pokemon['likes'] = _pokemon['likes'] - 1;
+                              _serviceLikes
+                                .unlike(appState.user!, appState.idPokemon)
+                                .then((result) {
+                                  if (result["status"] == "ok") {
+                                    Fluttertoast.showToast(
+                                      msg: "Like removed! 😞"
+                                    );
 
-                                _liked = false;
-                              });
+                                    setState(() {
+                                      _loadPokemon();
+                                    });
+                                  }
+                                });
                             } else {
-                              setState(() {
-                                _pokemon['likes'] = _pokemon['likes'] + 1;
+                              _serviceLikes
+                                  .like(appState.user!, appState.idPokemon)
+                                  .then((result) {
+                                    if (result["status"] == "ok") {
+                                      Fluttertoast.showToast(
+                                        msg: "Liked! 😊"
+                                      );
 
-                                _liked = true;
+                                      setState(() {
+                                        _loadPokemon();
+                                      });
+                                    }
                               });
                             }
                           },
