@@ -20,7 +20,7 @@ class Details extends StatefulWidget {
   State<StatefulWidget> createState() => DetailsState();
 }
 
-const pageSize = 4;
+const PAGE_SIZE = 4;
 
 class DetailsState extends State<Details> {
   late dynamic _staticFeed;
@@ -44,17 +44,20 @@ class DetailsState extends State<Details> {
 
   late ServicePokemons _servicePokemons;
   late ServiceLikes _serviceLikes;
+  late ServiceComments _serviceComments;
 
   @override
   void initState() {
-    _loadDataBase();
     _startSlide();
 
     _newCommentsController = TextEditingController();
+
     _servicePokemons = ServicePokemons();
     _serviceLikes = ServiceLikes();
+    _serviceComments = ServiceComments();
 
     _loadPokemon();
+    _loadComments();
 
     super.initState();
   }
@@ -64,60 +67,46 @@ class DetailsState extends State<Details> {
     _sliderController = PageController(initialPage: _selectedSlide);
   }
 
-  Future<void> _loadDataBase() async {
-    String stringJson =
-        await rootBundle.loadString('assets/json/pokemons.json');
-    _staticFeed = await json.decode(stringJson);
-
-    stringJson = await rootBundle.loadString('assets/json/comments.json');
-    _staticComments = await json.decode(stringJson);
-
-    _loadPokemon();
-    _loadComments();
-  }
-
   void _loadPokemon() {
     _servicePokemons.findPokemon(appState.idPokemon).then((pokemon) {
       _pokemon = pokemon;
 
-      _serviceLikes
-        .hasLiked(appState.user!, appState.idPokemon)
-        .then((hasLiked) {
-          setState(() {
-            _hasPokemon = _pokemon != null;
-            _liked = hasLiked;
-            
-            _isLoadingComments = false;
+      if(appState.user != null) {
+        _serviceLikes
+          .hasLiked(appState.user!, appState.idPokemon)
+          .then((hasLiked) {
+            setState(() {
+              _hasPokemon = _pokemon != null;
+              _liked = hasLiked;
+              
+              _isLoadingComments = false;
+            });
           });
+      } else {
+        setState(() {
+          _hasPokemon = _pokemon != null;
+          _isLoadingComments = false;
         });
+      }
     });
   }
 
-  void _loadComments() {
+   void _loadComments() {
     setState(() {
       _isLoadingComments = true;
     });
 
-    var moreComments = [];
-    _staticComments['comments'].where((item) {
-      return item['feed'] == appState.idPokemon;
-    }).forEach((item) {
-      moreComments.add(item);
-    });
+    _serviceComments
+      .getComments(appState.idPokemon, _nextPage, PAGE_SIZE)
+      .then((comments) {
+        setState(() {
+          _comments.addAll(comments);
+          _hasComments = _comments.isNotEmpty;
+          _nextPage += 1;
 
-    final totalCommentsToLoad = _nextPage * pageSize;
-    if (moreComments.length >= totalCommentsToLoad) {
-      moreComments = moreComments.sublist(0, totalCommentsToLoad);
-    }
-
-    setState(() {
-      _hasComments = moreComments.isNotEmpty;
-      _comments = moreComments;
-
-      _nextPage += 1;
-
-      _isLoadingComments = false;
-    });
+          _isLoadingComments = false;
+        });
+      });
   }
 
   Future<void> _updateComments() async {
@@ -127,29 +116,36 @@ class DetailsState extends State<Details> {
     _loadComments();
   }
 
-  void _addComements() {
-    if (appState.user != null) {
-      final comment = {
-        "content": _newCommentsController.text,
-        "user": {
-          "name": appState.user!.name,
-          "email": appState.user!.email,
-        },
-        "datetime": DateTime.now().toString(),
-        "feed": appState.idPokemon
-      };
+  void _addComment() {
+    _serviceComments
+        .add(
+          appState.idPokemon, appState.user!,
+          _newCommentsController.text
+        )
+        .then((result) {
+      if (result["status"] == "ok") {
+        Fluttertoast.showToast(msg: "Comments added successfully!");
 
-      setState(() {
-        _comments.insert(0, comment);
-      });
-    }
+        _updateComments();
+      }
+    });
   }
 
-  String _formatarData(String dataHora) {
-    DateTime dateTime = DateTime.parse(dataHora);
-    DateFormat formatador = DateFormat("dd/MM/yyyy HH:mm");
+  void _removeComment(int idComment) {
+    _serviceComments.remove(idComment).then((result) {
+      if (result["status"] == "ok") {
+        Fluttertoast.showToast(msg: "Comment removed successfully!");
 
-    return formatador.format(dateTime);
+        _updateComments();
+      }
+    });
+  }
+
+  String _formatDate(String dateHour) {
+    DateTime dateTime = DateTime.parse(dateHour);
+    DateFormat formatter = DateFormat("dd/MM/yyyy HH:mm");
+
+    return formatter.format(dateTime);
   }
 
   Widget _showInexistentCommentsMessage() {
@@ -179,7 +175,7 @@ class DetailsState extends State<Details> {
                       hintText: 'Type your comment...',
                       suffixIcon: GestureDetector(
                           onTap: () {
-                            _addComements();
+                            _addComment();
                           },
                           child: const Icon(Icons.send)))))
           : const SizedBox.shrink(),
@@ -218,7 +214,7 @@ class DetailsState extends State<Details> {
 
                         showDialog(
                             context: context,
-                            builder: (BuildContext contexto) {
+                            builder: (BuildContext context) {
                               return AlertDialog(
                                 title: const Text(
                                     "Do you really want to delete the comment?"),
@@ -226,17 +222,19 @@ class DetailsState extends State<Details> {
                                   TextButton(
                                       onPressed: () {
                                         setState(() {
-                                          _comments.insert(index, comment);
+                                          _loadComments();
                                         });
 
-                                        Navigator.of(contexto).pop();
+                                        Navigator.of(context).pop();
                                       },
                                       child: const Text("no")),
                                   TextButton(
                                       onPressed: () {
-                                        setState(() {});
+                                        _removeComment(
+                                          item["comment_id"]
+                                        );
 
-                                        Navigator.of(contexto).pop();
+                                        Navigator.of(context).pop();
                                       },
                                       child: const Text("yes"))
                                 ],
@@ -251,7 +249,7 @@ class DetailsState extends State<Details> {
                         Padding(
                             padding: const EdgeInsets.all(6.0),
                             child: Text(
-                              _comments[index]["content"],
+                              _comments[index]["comment"],
                               style: const TextStyle(fontSize: 12),
                             )),
                         Padding(
@@ -262,14 +260,14 @@ class DetailsState extends State<Details> {
                                     padding: const EdgeInsets.only(
                                         right: 10.0, left: 6.0),
                                     child: Text(
-                                      _comments[index]["user"]["name"],
+                                      _comments[index]["name"],
                                       style: const TextStyle(fontSize: 12),
                                     )),
                                 Padding(
                                     padding: const EdgeInsets.only(right: 10.0),
                                     child: Text(
-                                      _formatarData(
-                                          _comments[index]["datetime"]),
+                                      _formatDate(
+                                          _comments[index]["date"]),
                                       style: const TextStyle(fontSize: 12),
                                     )),
                               ],

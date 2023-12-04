@@ -65,3 +65,35 @@ class ServiceLikes {
     return jsonDecode(response.body);
   }
 }
+
+class ServiceComments {
+  Future<List<dynamic>> getComments(
+    int idPokemon,
+    int page,
+    int pageSize
+) async {
+    final response = await http.get(Uri.parse(
+        "${URL_COMMENTS.toString()}/$idPokemon/$page/$pageSize"));
+    final comments = jsonDecode(response.body);
+
+    return comments;
+  }
+
+Future<dynamic> add(
+    int idPokemon, 
+    User user,
+    String comment
+) async {
+    final response = await http.post(Uri.parse(
+        "${URL_ADD_COMMENT.toString()}/$idPokemon/${user.name}/${user.email}/$comment"));
+
+    return jsonDecode(response.body);
+  }
+
+  Future<dynamic> remove(int idComment) async {
+    final response = await http.delete(
+        Uri.parse("${URL_REMOVE_COMMENT.toString()}/$idComment"));
+
+    return jsonDecode(response.body);
+  }
+}
