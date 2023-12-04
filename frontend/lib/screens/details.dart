@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:pokeinfo/apis/services.dart';
 import 'package:keyboard_visibility_pro/keyboard_visibility_pro.dart';
 import 'package:page_view_dot_indicator/page_view_dot_indicator.dart';
 import 'package:share_plus/share_plus.dart';
@@ -24,7 +25,7 @@ class DetailsState extends State<Details> {
   late dynamic _staticFeed;
   late dynamic _staticComments;
 
-  late PageController _controladorSlides;
+  late PageController _sliderController;
   late int _selectedSlide;
 
   bool _hasPokemon = false;
@@ -40,19 +41,24 @@ class DetailsState extends State<Details> {
   bool _liked = false;
   bool _isKeyboardVisible = false;
 
+  late ServicePokemons _servicePokemons;
+
   @override
   void initState() {
     _loadDataBase();
     _startSlide();
 
     _newCommentsController = TextEditingController();
+    _servicePokemons = ServicePokemons();
+
+    _loadPokemon();
 
     super.initState();
   }
 
   void _startSlide() {
     _selectedSlide = 0;
-    _controladorSlides = PageController(initialPage: _selectedSlide);
+    _sliderController = PageController(initialPage: _selectedSlide);
   }
 
   Future<void> _loadDataBase() async {
@@ -63,18 +69,18 @@ class DetailsState extends State<Details> {
     stringJson = await rootBundle.loadString('assets/json/comments.json');
     _staticComments = await json.decode(stringJson);
 
-    _loadPokemons();
+    _loadPokemon();
     _loadComments();
   }
 
-  void _loadPokemons() {
-    _pokemon = _staticFeed['pokemons']
-        .firstWhere((pokemon) => pokemon['id'] == appState.idPokemon);
+  void _loadPokemon() {
+    _servicePokemons.findPokemon(appState.idPokemon).then((pokemon) {
+      _pokemon = pokemon;
 
-    setState(() {
-      _hasPokemon = _pokemon != null;
-
-      _isLoadingComments = false;
+      setState(() {
+        _hasPokemon = _pokemon != null;
+        _isLoadingComments = false;
+      });
     });
   }
 
@@ -280,7 +286,7 @@ class DetailsState extends State<Details> {
           child: Stack(children: [
             PageView.builder(
               itemCount: 3,
-              controller: _controladorSlides,
+              controller: _sliderController,
               onPageChanged: (slide) {
                 setState(() {
                   _selectedSlide = slide;
@@ -289,7 +295,7 @@ class DetailsState extends State<Details> {
               itemBuilder: (context, pagePosition) {
                 const types = ["front_default", "back_default", "front_shiny"];
                 return Image.network(
-                  _pokemon["sprites"][types[pagePosition]],
+                  _pokemon[types[pagePosition]],
                   width: 200,
                 );
               },
@@ -420,11 +426,10 @@ class DetailsState extends State<Details> {
                                 ),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: _pokemon['abilities']
-                                      .map<Widget>(
-                                        (item) => Text(item["ability"]["name"]),
-                                      )
-                                      .toList(),
+                                  children: [
+                                    Text(_pokemon['ability0'].toString()),
+                                    Text(_pokemon['ability1'].toString())
+                                  ]
                                 )
                               ]),
                           Row(
@@ -438,10 +443,10 @@ class DetailsState extends State<Details> {
                                 ),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: _pokemon['types']
-                                      .map<Widget>(
-                                          (item) => Text(item["type"]["name"]))
-                                      .toList(),
+                                  children: [
+                                    Text(_pokemon['type0'].toString()),
+                                    Text(_pokemon['type1'].toString())
+                                  ]
                                 )
                               ]),
                           Row(
@@ -455,9 +460,9 @@ class DetailsState extends State<Details> {
                                 ),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: _pokemon['forms']
-                                      .map<Widget>((item) => Text(item["name"]))
-                                      .toList(),
+                                  children: [
+                                    Text(_pokemon['form'].toString())
+                                  ]
                                 )
                               ]),
                           Padding(

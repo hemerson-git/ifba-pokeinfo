@@ -6,6 +6,7 @@ import 'package:flat_list/flat_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:pokeinfo/apis/services.dart';
 import 'package:pokeinfo/auth.dart';
 import 'package:pokeinfo/components/card_pokemon.dart';
 import 'package:pokeinfo/state.dart';
@@ -17,7 +18,7 @@ class Pokemons extends StatefulWidget {
   State<StatefulWidget> createState() => PokemonsState();
 }
 
-const pageSize = 6;
+const PAGE_SIZE = 6;
 
 class PokemonsState extends State<Pokemons> {
   late dynamic _staticFeed;
@@ -29,12 +30,15 @@ class PokemonsState extends State<Pokemons> {
   bool _isLoading = false;
   int _nextPage = 1;
 
+  late ServicePokemons _servicePokemons;
+
   @override
   void initState() {
-    _readStaticFeed();
     _filterController = TextEditingController();
 
     _getLoggedUser();
+    _servicePokemons = ServicePokemons();
+    _loadPokemons();
 
     super.initState();
   }
@@ -61,33 +65,29 @@ class PokemonsState extends State<Pokemons> {
       _isLoading = true;
     });
 
-    var morePokemons = [];
-
     if (_filter.isNotEmpty) {
-      List<dynamic> pokemons = _staticFeed['pokemons'];
-      pokemons.where((item) {
-        String pokemonName = item['name'];
-        return pokemonName.toLowerCase().contains(_filter.toLowerCase());
-      }).forEach((item) {
-        morePokemons.add(item);
-      });
+      _servicePokemons
+        .findPokemons(_nextPage, PAGE_SIZE, _filter)
+        .then((pokemons) {
+          setState(() {
+            _isLoading = false;
+            _nextPage += 1;
+
+            _pokemons.addAll(pokemons);
+          });
+        });
     } else {
-      morePokemons = _pokemons;
-      final totalFeedsToLoad = _nextPage * pageSize;
-      if (_staticFeed['pokemons'].length >= totalFeedsToLoad) {
-        morePokemons =
-            _staticFeed['pokemons'].sublist(0, totalFeedsToLoad);
-      } else {
-        morePokemons = _staticFeed['pokemons'];
-      }
+      _servicePokemons
+        .getPokemons(_nextPage, PAGE_SIZE)
+        .then((pokemons) {
+          setState(() {
+            _isLoading = false;
+            _nextPage += 1;
+
+            _pokemons.addAll(pokemons);
+          });
+        });
     }
-
-    setState(() {
-      _isLoading = false;
-      _nextPage += 1;
-
-      _pokemons = morePokemons;
-    });
   }
 
   Future<void> _updatePokemonsList() async {
@@ -137,7 +137,7 @@ class PokemonsState extends State<Pokemons> {
                         onTap: () {
                           Auth.login().then((user) {
                             Fluttertoast.showToast(
-                                msg: "You have been disconected");
+                                msg: "You have been disconnected");
 
                             setState(() {
                               appState.onLogin(user);
@@ -166,7 +166,7 @@ class PokemonsState extends State<Pokemons> {
           },
           listEmptyWidget: Container(
               alignment: Alignment.center,
-              child: const Text("There is no more products to be shown 😞")),
+              child: const Text("There is no more pokemons to be shown 😞")),
         ));
   }
 }

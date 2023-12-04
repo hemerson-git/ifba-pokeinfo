@@ -7,43 +7,43 @@ import 'screens/details.dart';
 import 'screens/feed.dart';
 
 void main() {
-  runApp(const Marcas());
+  runApp(const Pokeinfo());
 }
 
-class Marcas extends StatelessWidget {
-  const Marcas({super.key});
+class Pokeinfo extends StatelessWidget {
+  const Pokeinfo({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
         create: (_) => AppState(),
         child: MaterialApp(
-          title: 'Melhores Marcas',
+          title: 'Pokeinfo',
           theme: ThemeData(
             colorScheme: const ColorScheme.light(),
             useMaterial3: true,
           ),
-          home: const TelaPrincipal(),
+          home: const MainScreen(),
         ));
   }
 }
 
-class TelaPrincipal extends StatefulWidget {
-  const TelaPrincipal({super.key});
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
 
   @override
-  State<TelaPrincipal> createState() => _TelaPrincipalState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _TelaPrincipalState extends State<TelaPrincipal> {
-  void _exibirComoRetrato() {
+class _MainScreenState extends State<MainScreen> {
+  void _show_portrait() {
     SystemChrome.setPreferredOrientations(
         [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
   }
 
   @override
   Widget build(BuildContext context) {
-    _exibirComoRetrato();
+    _show_portrait();
 
     appState = context.watch<AppState>();
     Widget tela = const SizedBox.shrink();
