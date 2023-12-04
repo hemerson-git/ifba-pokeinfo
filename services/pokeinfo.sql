@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS pokeinfo;
+
 CREATE TABLE pokeinfo(
    abilities0abilityname                                               VARCHAR(11) NOT NULL 
   ,abilities0abilityurl                                                VARCHAR(37) NOT NULL
@@ -169,7 +171,7 @@ CREATE TABLE `feeds` (
   `pokemon` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_feeds_pokemons_idx` (`pokemon`),
-  CONSTRAINT `fk_feeds_pokemons` FOREIGN KEY (`pokemon`) REFERENCES `pokemons` (`id`)
+  CONSTRAINT `fk_feeds_pokemons` FOREIGN KEY (`pokemon`) REFERENCES `pokeinfo` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

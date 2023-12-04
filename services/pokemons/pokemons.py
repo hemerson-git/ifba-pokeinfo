@@ -40,7 +40,7 @@ def get_pokemons(page, items_per_page):
     cursor = connection.cursor(dictionary=True)
     cursor.execute(
         "SELECT front_default, height, name, weight, base_experience, id FROM pokeinfo " +
-        "ORDER BY speciesname desc " +
+        "ORDER BY id asc " +
         "LIMIT " + str((page - 1) * items_per_page) + ", " + str(items_per_page)
     )
     pokemons = cursor.fetchall()
@@ -83,6 +83,9 @@ def find_pokemon(feed_id):
     cursor.execute(
         "select feeds.id as pokemon_id, DATE_FORMAT(feeds.data, '%Y-%m-%d %H:%i') as data, " +
         "pokeinfo.height, pokeinfo.name, pokeinfo.weight, pokeinfo.base_experience, pokeinfo.id, " +
+        "pokeinfo.abilities0abilityname as ability0, pokeinfo.abilities1abilityname as ability1, " + 
+        "pokeinfo.types0typename as type0, pokeinfo.types1typename as type1, " + 
+        "pokeinfo.forms0name as form, " + 
         "pokeinfo.front_default as front_default, pokeinfo.back_default, IFNULL(pokeinfo.back_default, '') as back_default, " +
         "IFNULL(pokeinfo.front_shiny, '') as front_shiny " +
         "FROM feeds, pokeinfo " +
