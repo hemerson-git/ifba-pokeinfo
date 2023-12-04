@@ -29,7 +29,7 @@ class TestsLikes(unittest.TestCase):
 
         self.assertEqual(response['status'], "ok")
 
-    def test_02_search_pokemon_by_name(self):
+    def test_02_remove_like(self):
         data = self.send(f"{URL_UNLIKE}/{LIKE_EMAIL}/1", "POST")
         response = json.loads(data)
 
