@@ -32,7 +32,7 @@ class CardPokemonState extends State<CardPokemon> {
                         topRight: Radius.circular(15.0)),
                     child: Center(
                       child: Image.network(
-                        widget.pokemon["sprites"]["front_default"],
+                        widget.pokemon["front_default"],
                         width: 100,
                       ),
                     ),

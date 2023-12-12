@@ -5,9 +5,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:pokeinfo/apis/services.dart';
 import 'package:keyboard_visibility_pro/keyboard_visibility_pro.dart';
 import 'package:page_view_dot_indicator/page_view_dot_indicator.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 import '../state.dart';
 
@@ -18,13 +20,13 @@ class Details extends StatefulWidget {
   State<StatefulWidget> createState() => DetailsState();
 }
 
-const pageSize = 4;
+const PAGE_SIZE = 4;
 
 class DetailsState extends State<Details> {
   late dynamic _staticFeed;
   late dynamic _staticComments;
 
-  late PageController _controladorSlides;
+  late PageController _sliderController;
   late int _selectedSlide;
 
   bool _hasPokemon = false;
@@ -40,69 +42,71 @@ class DetailsState extends State<Details> {
   bool _liked = false;
   bool _isKeyboardVisible = false;
 
+  late ServicePokemons _servicePokemons;
+  late ServiceLikes _serviceLikes;
+  late ServiceComments _serviceComments;
+
   @override
   void initState() {
-    _loadDataBase();
     _startSlide();
 
     _newCommentsController = TextEditingController();
+
+    _servicePokemons = ServicePokemons();
+    _serviceLikes = ServiceLikes();
+    _serviceComments = ServiceComments();
+
+    _loadPokemon();
+    _loadComments();
 
     super.initState();
   }
 
   void _startSlide() {
     _selectedSlide = 0;
-    _controladorSlides = PageController(initialPage: _selectedSlide);
+    _sliderController = PageController(initialPage: _selectedSlide);
   }
 
-  Future<void> _loadDataBase() async {
-    String stringJson =
-        await rootBundle.loadString('assets/json/pokemons.json');
-    _staticFeed = await json.decode(stringJson);
+  void _loadPokemon() {
+    _servicePokemons.findPokemon(appState.idPokemon).then((pokemon) {
+      _pokemon = pokemon;
 
-    stringJson = await rootBundle.loadString('assets/json/comments.json');
-    _staticComments = await json.decode(stringJson);
-
-    _loadPokemons();
-    _loadComments();
-  }
-
-  void _loadPokemons() {
-    _pokemon = _staticFeed['pokemons']
-        .firstWhere((pokemon) => pokemon['id'] == appState.idPokemon);
-
-    setState(() {
-      _hasPokemon = _pokemon != null;
-
-      _isLoadingComments = false;
+      if(appState.user != null) {
+        _serviceLikes
+          .hasLiked(appState.user!, appState.idPokemon)
+          .then((hasLiked) {
+            setState(() {
+              _hasPokemon = _pokemon != null;
+              _liked = hasLiked;
+              
+              _isLoadingComments = false;
+            });
+          });
+      } else {
+        setState(() {
+          _hasPokemon = _pokemon != null;
+          _isLoadingComments = false;
+        });
+      }
     });
   }
 
-  void _loadComments() {
+   void _loadComments() {
     setState(() {
       _isLoadingComments = true;
     });
 
-    var moreComments = [];
-    _staticComments['comments'].where((item) {
-      return item['feed'] == appState.idPokemon;
-    }).forEach((item) {
-      moreComments.add(item);
-    });
+    _serviceComments
+      .getComments(appState.idPokemon, _nextPage, PAGE_SIZE)
+      .then((comments) {
+        setState(() {
+          _comments.addAll(comments);
+          _hasComments = _comments.isNotEmpty;
+          _nextPage += 1;
 
-    final totalCommentsToLoad = _nextPage * pageSize;
-    if (moreComments.length >= totalCommentsToLoad) {
-      moreComments = moreComments.sublist(0, totalCommentsToLoad);
-    }
-
-    setState(() {
-      _hasComments = moreComments.isNotEmpty;
-      _comments = moreComments;
-
-      _nextPage += 1;
-
-      _isLoadingComments = false;
-    });
+          _isLoadingComments = false;
+        });
+      });
   }
 
   Future<void> _updateComments() async {
@@ -112,29 +116,36 @@ class DetailsState extends State<Details> {
     _loadComments();
   }
 
-  void _addComements() {
-    if (appState.user != null) {
-      final comment = {
-        "content": _newCommentsController.text,
-        "user": {
-          "name": appState.user!.name,
-          "email": appState.user!.email,
-        },
-        "datetime": DateTime.now().toString(),
-        "feed": appState.idPokemon
-      };
+  void _addComment() {
+    _serviceComments
+        .add(
+          appState.idPokemon, appState.user!,
+          _newCommentsController.text
+        )
+        .then((result) {
+      if (result["status"] == "ok") {
+        Fluttertoast.showToast(msg: "Comments added successfully!");
 
-      setState(() {
-        _comments.insert(0, comment);
-      });
-    }
+        _updateComments();
+      }
+    });
   }
 
-  String _formatarData(String dataHora) {
-    DateTime dateTime = DateTime.parse(dataHora);
-    DateFormat formatador = DateFormat("dd/MM/yyyy HH:mm");
+  void _removeComment(int idComment) {
+    _serviceComments.remove(idComment).then((result) {
+      if (result["status"] == "ok") {
+        Fluttertoast.showToast(msg: "Comment removed successfully!");
 
-    return formatador.format(dateTime);
+        _updateComments();
+      }
+    });
+  }
+
+  String _formatDate(String dateHour) {
+    DateTime dateTime = DateTime.parse(dateHour);
+    DateFormat formatter = DateFormat("dd/MM/yyyy HH:mm");
+
+    return formatter.format(dateTime);
   }
 
   Widget _showInexistentCommentsMessage() {
@@ -164,7 +175,7 @@ class DetailsState extends State<Details> {
                       hintText: 'Type your comment...',
                       suffixIcon: GestureDetector(
                           onTap: () {
-                            _addComements();
+                            _addComment();
                           },
                           child: const Icon(Icons.send)))))
           : const SizedBox.shrink(),
@@ -203,7 +214,7 @@ class DetailsState extends State<Details> {
 
                         showDialog(
                             context: context,
-                            builder: (BuildContext contexto) {
+                            builder: (BuildContext context) {
                               return AlertDialog(
                                 title: const Text(
                                     "Do you really want to delete the comment?"),
@@ -211,17 +222,19 @@ class DetailsState extends State<Details> {
                                   TextButton(
                                       onPressed: () {
                                         setState(() {
-                                          _comments.insert(index, comment);
+                                          _loadComments();
                                         });
 
-                                        Navigator.of(contexto).pop();
+                                        Navigator.of(context).pop();
                                       },
                                       child: const Text("no")),
                                   TextButton(
                                       onPressed: () {
-                                        setState(() {});
+                                        _removeComment(
+                                          item["comment_id"]
+                                        );
 
-                                        Navigator.of(contexto).pop();
+                                        Navigator.of(context).pop();
                                       },
                                       child: const Text("yes"))
                                 ],
@@ -236,7 +249,7 @@ class DetailsState extends State<Details> {
                         Padding(
                             padding: const EdgeInsets.all(6.0),
                             child: Text(
-                              _comments[index]["content"],
+                              _comments[index]["comment"],
                               style: const TextStyle(fontSize: 12),
                             )),
                         Padding(
@@ -247,14 +260,14 @@ class DetailsState extends State<Details> {
                                     padding: const EdgeInsets.only(
                                         right: 10.0, left: 6.0),
                                     child: Text(
-                                      _comments[index]["user"]["name"],
+                                      _comments[index]["name"],
                                       style: const TextStyle(fontSize: 12),
                                     )),
                                 Padding(
                                     padding: const EdgeInsets.only(right: 10.0),
                                     child: Text(
-                                      _formatarData(
-                                          _comments[index]["datetime"]),
+                                      _formatDate(
+                                          _comments[index]["date"]),
                                       style: const TextStyle(fontSize: 12),
                                     )),
                               ],
@@ -280,7 +293,7 @@ class DetailsState extends State<Details> {
           child: Stack(children: [
             PageView.builder(
               itemCount: 3,
-              controller: _controladorSlides,
+              controller: _sliderController,
               onPageChanged: (slide) {
                 setState(() {
                   _selectedSlide = slide;
@@ -289,7 +302,7 @@ class DetailsState extends State<Details> {
               itemBuilder: (context, pagePosition) {
                 const types = ["front_default", "back_default", "front_shiny"];
                 return Image.network(
-                  _pokemon["sprites"][types[pagePosition]],
+                  _pokemon[types[pagePosition]],
                   width: 200,
                 );
               },
@@ -301,16 +314,32 @@ class DetailsState extends State<Details> {
                       ? IconButton(
                           onPressed: () {
                             if (_liked) {
-                              setState(() {
-                                _pokemon['likes'] = _pokemon['likes'] - 1;
+                              _serviceLikes
+                                .unlike(appState.user!, appState.idPokemon)
+                                .then((result) {
+                                  if (result["status"] == "ok") {
+                                    Fluttertoast.showToast(
+                                      msg: "Like removed! 😞"
+                                    );
 
-                                _liked = false;
-                              });
+                                    setState(() {
+                                      _loadPokemon();
+                                    });
+                                  }
+                                });
                             } else {
-                              setState(() {
-                                _pokemon['likes'] = _pokemon['likes'] + 1;
+                              _serviceLikes
+                                  .like(appState.user!, appState.idPokemon)
+                                  .then((result) {
+                                    if (result["status"] == "ok") {
+                                      Fluttertoast.showToast(
+                                        msg: "Liked! 😊"
+                                      );
 
-                                _liked = true;
+                                      setState(() {
+                                        _loadPokemon();
+                                      });
+                                    }
                               });
                             }
                           },
@@ -420,11 +449,10 @@ class DetailsState extends State<Details> {
                                 ),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: _pokemon['abilities']
-                                      .map<Widget>(
-                                        (item) => Text(item["ability"]["name"]),
-                                      )
-                                      .toList(),
+                                  children: [
+                                    Text(_pokemon['ability0'].toString()),
+                                    Text(_pokemon['ability1'].toString())
+                                  ]
                                 )
                               ]),
                           Row(
@@ -438,10 +466,10 @@ class DetailsState extends State<Details> {
                                 ),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: _pokemon['types']
-                                      .map<Widget>(
-                                          (item) => Text(item["type"]["name"]))
-                                      .toList(),
+                                  children: [
+                                    Text(_pokemon['type0'].toString()),
+                                    Text(_pokemon['type1'].toString())
+                                  ]
                                 )
                               ]),
                           Row(
@@ -455,9 +483,9 @@ class DetailsState extends State<Details> {
                                 ),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: _pokemon['forms']
-                                      .map<Widget>((item) => Text(item["name"]))
-                                      .toList(),
+                                  children: [
+                                    Text(_pokemon['form'].toString())
+                                  ]
                                 )
                               ]),
                           Padding(
